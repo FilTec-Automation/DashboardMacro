@@ -38,7 +38,6 @@ Public Function CollectUniques(rng As Range) As Collection
     Set CollectUniques = col
     
 End Function
-
 Public Function UpdateNote(taskNotes() As String) As String
     If UBound(taskNotes) = 0 Then
         UpdateNote = ""
@@ -54,26 +53,48 @@ End Function
 Public Function ValidateTaskNote(taskNote As String) As Boolean
     Dim taskNoteElements() As String
     taskNoteElements = Split(taskNote, ",")
-
-    If UBound(taskNoteElements) < 2 Then
+    
+    If UBound(taskNoteElements) = 2 Then
+        Debug.Print "Task notes have 3 sections"
+        
+        ' check if the note has 3 parts to it
+        If UBound(taskNoteElements) <> 2 Then
+            ValidateTaskNote = False
+            Debug.Print "Task Notes don't have their 3 sections: Name, Status, Date"
+            Exit Function
+        End If
+    ElseIf UBound(taskNoteElements) = 3 Then
+        Debug.Print "Task notes have 4 sections"
+    Else
         ValidateTaskNote = False
-        Debug.Print "Task Notes are incomplete"
+        Debug.Print "Task Notes don't have their 3 sections: Name, Status, Date"
         Exit Function
-    Else if UBound(taskNoteElements) 
+    End If
+       
+
+    ' check if the note has 3 parts to it
+    If UBound(taskNoteElements) <> 2 Then
+        ValidateTaskNote = False
+        Debug.Print "Task Notes don't have their 3 sections: Name, Status, Date"
+        Exit Function
     End If
 
+    ' split the date element into it's own components
     Dim dateNoteElements() As String
     dateNoteElements = Split(taskNoteElements(2), ":")
     
+    ' check if the date element has 2 components
     If UBound(dateNoteElements) <> 1 Then
         ValidateTaskNote = False
         Debug.Print "Task note is missing the date isn't complete"
         Exit Function
     End If
 
+    ' remove the whitespace around the date component of the date element
     Dim noteDate As String
     noteDate = Trim(dateNoteElements(1))
 
+    ' check if the date components is complete
     If Len(noteDate) <> 8 Then
         ValidateTaskNote = False
         Debug.Print "The date isn't complete"
