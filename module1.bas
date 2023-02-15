@@ -39,6 +39,85 @@ Public Function CollectUniques(rng As Range) As Collection
     
 End Function
 
+Public Function UpdateNote(taskNotes() As String) As String
+    If UBound(taskNotes) = 0 Then
+        UpdateNote = ""
+        Debug.Print "Task Notes are empty"
+        Exit Function
+    End If
+
+    ReDim Preserve taskNotes(UBound(taskNotes) - 1)
+    UpdateNote = Join(taskNotes, "|")
+    Debug.Print "Notes string has been updated. Last Item removed"
+End Function
+
+Public Function ValidateTaskNote(taskNote As String) As Boolean
+    Dim taskNoteElements() As String
+    taskNoteElements = Split(taskNote, ",")
+
+    '  Notes with 4 components are notes with times. Check if the note has all it's components
+    If UBound(taskNoteElements) = 3 Then
+        Dim timeCompArr() As String
+        Dim desc As String
+        Dim secs As Integer
+        
+        timeCompArr = Split(taskNoteElements(3), ":")
+        desc = Trim(timeCompArr(0))
+        secs = CInt(Trim(timeCompArr(1)))
+        
+        If desc = "Time" And secs > 1 Then
+            ValidateTaskNote = True
+            Exit Function
+        End If
+    End If
+
+    ' Notes with 3 components can either be complete notes or a broken timing note. Check if the note is a standard note and that it's complete
+    If UBound(taskNoteElements) = 2 Then
+        Dim statusArr() As String
+        Dim status As String
+        Dim dateArr() As String
+        Dim dateStr As String
+
+        statusArr = Split(taskNoteElements(1), ":")
+        status = Trim(statusArr(0))
+
+        dateArr = Split(taskNoteElements(2), ":")
+        dateStr = Trim(dateArr(1))
+
+        If status = "Status" And Len(dateStr) = 8 Then
+            ValidateTaskNote = True
+            Exit Function
+        End If
+    End If
+
+    ' Notes did not pass any validation checks. Validation Failed
+    Debug.Print "Task note did NOT pass validation"
+    ValidateTaskNote = False
+End Function
+
+Public Function ValidateNotesStr(noteTxt As String) As String
+    
+    Dim taskNotes() As String
+    taskNotes = Split(noteTxt, "|")
+    Dim lastTaskNote As String
+    lastTaskNote = taskNotes(UBound(taskNotes))
+    Dim lastTaskNoteArr() As String
+    lastTaskNoteArr = Split(lastTaskNote, ",")
+    
+    If UBound(lastTaskNoteArr) = 3 Or UBound(lastTaskNoteArr) = 2 Then
+        ' check if the last note passes validation.
+        If ValidateTaskNote(lastTaskNote) Then
+            ValidateNotesStr = noteTxt
+            Exit Function
+        End If
+    End If
+    
+    ValidateNotesStr = UpdateNote(taskNotes)
+    Debug.Print "Last task note didn't pass validation. Had to be updated"
+
+End Function
+
+
 Sub UpdateDataFromEE()
 
     Dim Cn As ADODB.Connection
@@ -114,7 +193,6 @@ Sub UpdateDataFromEE()
     Worksheets("EE Data").Cells(1, 36).Value = "Assembly"
     Worksheets("EE Data").Cells(1, 37).Value = "Budget Time"
 
-
     Set src = Worksheets("EE Data").Range("A1").CurrentRegion
     Worksheets("EE Data").ListObjects.Add(SourceType:=xlSrcRange, Source:=src, xlListObjectHasHeaders:=xlYes, tablestyleName:="TableStyleLight8").Name = "EasyEng_Table"
 
@@ -125,8 +203,24 @@ Sub UpdateDataFromEE()
     countTxt = "|"
 
     For X = 2 To NumRows
-
+    Dim debugMsg As String
+    ' debugMsg = "*************************************************************** Row " & X & " ***************************************************************"
+    Debug.Print debugMsg
     myTxt = Worksheets("EE Data").Cells(X, 12).Text
+    
+    If myTxt <> "" Then
+        Dim note As String
+        note = ValidateNotesStr(myTxt)
+        
+        If myTxt <> note Then
+            
+            Debug.Print "********************* myTxt *********************"
+            Debug.Print myTxt
+            
+            Debug.Print "********************* new note *********************"
+            Debug.Print note
+        End If
+    End If
 
     Worksheets("EE Data").Cells(X, 38).Value = (Len(myTxt) - Len(Replace(myTxt, countTxt, ""))) + 1
 
